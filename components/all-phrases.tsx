@@ -1,21 +1,64 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Loader2, Eye, EyeOff } from "lucide-react"
 import { getAllPhrases } from "@/lib/actions"
+import { RefreshButton } from "@/components/refresh-button"
 import type { Phrase } from "@/lib/types"
+
+function PhraseCard({ phrase }: { phrase: Phrase }) {
+  const [isRevealed, setIsRevealed] = useState(false)
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-xl">{phrase.japanese}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {isRevealed ? (
+            <>
+              <p className="text-lg font-semibold text-foreground">{phrase.english}</p>
+              {phrase.context && <p className="text-sm text-muted-foreground italic">{phrase.context}</p>}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsRevealed(false)}
+                className="w-full"
+              >
+                <EyeOff className="size-4 mr-2" />
+                Hide Answer
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setIsRevealed(true)}
+              className="w-full"
+            >
+              <Eye className="size-4 mr-2" />
+              Show English Answer
+            </Button>
+          )}
+          <div className="mt-3 flex gap-4 text-xs text-muted-foreground border-t pt-3">
+            <span>Queries: {phrase.query_count}</span>
+            {phrase.reviewed_at && <span>Last reviewed: {new Date(phrase.reviewed_at).toLocaleDateString()}</span>}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 export function AllPhrases() {
   const [phrases, setPhrases] = useState<Phrase[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadPhrases()
-  }, [])
-
-  const loadPhrases = async () => {
+  const loadPhrases = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
@@ -26,9 +69,13 @@ export function AllPhrases() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
-  if (isLoading) {
+  useEffect(() => {
+    loadPhrases()
+  }, [loadPhrases])
+
+  if (isLoading && phrases.length === 0) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
@@ -48,21 +95,12 @@ export function AllPhrases() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-semibold text-foreground mb-6">Recent Phrases</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-semibold text-foreground">Recent Phrases</h2>
+        <RefreshButton onRefresh={loadPhrases} isLoading={isLoading} />
+      </div>
       {phrases.map((phrase) => (
-        <Card key={phrase.phrase_id}>
-          <CardHeader>
-            <CardTitle className="text-xl">{phrase.english}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg text-muted-foreground mb-2">{phrase.japanese}</p>
-            {phrase.context && <p className="text-sm text-muted-foreground italic">{phrase.context}</p>}
-            <div className="mt-3 flex gap-4 text-xs text-muted-foreground">
-              <span>Queries: {phrase.query_count}</span>
-              {phrase.reviewed_at && <span>Last reviewed: {new Date(phrase.reviewed_at).toLocaleDateString()}</span>}
-            </div>
-          </CardContent>
-        </Card>
+        <PhraseCard key={phrase.phrase_id} phrase={phrase} />
       ))}
     </div>
   )

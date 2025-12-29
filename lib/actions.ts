@@ -1,5 +1,7 @@
 "use server"
 
+import type { Phrase } from "./types"
+
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://mxw2ttoognhtpjwvfvq4itjw7a0qdfqc.lambda-url.ap-northeast-1.on.aws/"
 const API_SECRET = process.env.API_SECRET || "change-me-in-production"
@@ -30,22 +32,56 @@ async function apiRequest<T>(action: string, params: Record<string, any> = {}): 
   return data
 }
 
-export async function getReviewPhrases(limit = 20) {
-  return apiRequest("get_review_phrases", { limit })
+// 型定義
+interface PhrasesResponse {
+  success: boolean
+  phrases: Phrase[]
 }
 
-export async function getAllPhrases(limit = 50) {
-  return apiRequest("get_all_phrases", { limit })
+interface UpdateReviewedResponse {
+  success: boolean
+  phrase_id: string
 }
 
-export async function updateReviewed(phraseId: string) {
-  return apiRequest("update_reviewed", { phrase_id: phraseId })
+interface WeaknessesResponse {
+  success: boolean
+  weaknesses: Array<{
+    pattern: string
+    count: number
+    examples: Array<{
+      original: string
+      corrected: string
+      feedback: string
+    }>
+  }>
 }
 
-export async function getWeaknesses(limit = 10) {
-  return apiRequest("get_weaknesses", { limit })
+interface StatsResponse {
+  success: boolean
+  stats: {
+    total_phrases: number
+    total_corrections: number
+    reviewed_phrases: number
+    never_reviewed: number
+  }
 }
 
-export async function getStats() {
-  return apiRequest("get_stats")
+export async function getReviewPhrases(limit = 20): Promise<PhrasesResponse> {
+  return apiRequest<PhrasesResponse>("get_review_phrases", { limit })
+}
+
+export async function getAllPhrases(limit = 50): Promise<PhrasesResponse> {
+  return apiRequest<PhrasesResponse>("get_all_phrases", { limit })
+}
+
+export async function updateReviewed(phraseId: string): Promise<UpdateReviewedResponse> {
+  return apiRequest<UpdateReviewedResponse>("update_reviewed", { phrase_id: phraseId })
+}
+
+export async function getWeaknesses(limit = 10): Promise<WeaknessesResponse> {
+  return apiRequest<WeaknessesResponse>("get_weaknesses", { limit })
+}
+
+export async function getStats(): Promise<StatsResponse> {
+  return apiRequest<StatsResponse>("get_stats")
 }

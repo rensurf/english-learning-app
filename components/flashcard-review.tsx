@@ -3,7 +3,10 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Loader2 } from "lucide-react"
+import { Loader2, Settings } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { getReviewPhrases, updateReviewed } from "@/lib/actions"
 import type { Phrase } from "@/lib/types"
 
@@ -14,17 +17,24 @@ export function FlashcardReview() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [reviewedCount, setReviewedCount] = useState(0)
+  const [showSettings, setShowSettings] = useState(false)
+  const [limit, setLimit] = useState(20)
+  const [sortBy, setSortBy] = useState<'priority' | 'reviewed_at' | 'query_count' | 'created_at'>('priority')
+  const [order, setOrder] = useState<'asc' | 'desc'>('asc')
 
   useEffect(() => {
     loadPhrases()
-  }, [])
+  }, [limit, sortBy, order])
 
   const loadPhrases = async () => {
     setIsLoading(true)
     setError(null)
     try {
-      const data = await getReviewPhrases(20)
+      const data = await getReviewPhrases(limit, sortBy, order)
       setPhrases(data.phrases || [])
+      setCurrentIndex(0)
+      setReviewedCount(0)
+      setIsFlipped(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load phrases")
     } finally {
@@ -112,6 +122,70 @@ export function FlashcardReview() {
 
   return (
     <div className="space-y-6">
+      {/* Settings Panel */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Settings className="size-5" />
+              Review Settings
+            </h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowSettings(!showSettings)}
+            >
+              {showSettings ? 'Hide' : 'Show'}
+            </Button>
+          </div>
+
+          {showSettings && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+              <div className="space-y-2">
+                <Label htmlFor="review-limit">Number of cards</Label>
+                <Input
+                  id="review-limit"
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={limit}
+                  onChange={(e) => setLimit(Number(e.target.value))}
+                  className="w-full"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="review-sortBy">Sort by</Label>
+                <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
+                  <SelectTrigger id="review-sortBy">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="priority">Priority (Smart)</SelectItem>
+                    <SelectItem value="reviewed_at">Last Reviewed</SelectItem>
+                    <SelectItem value="query_count">Query Count</SelectItem>
+                    <SelectItem value="created_at">Created Date</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="review-order">Order</Label>
+                <Select value={order} onValueChange={(value) => setOrder(value as 'asc' | 'desc')}>
+                  <SelectTrigger id="review-order">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="asc">Oldest/Least First</SelectItem>
+                    <SelectItem value="desc">Newest/Most First</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="text-center text-sm text-muted-foreground">{progress}</div>
 
       <div className="perspective-1000 mx-auto max-w-2xl">
@@ -126,12 +200,12 @@ export function FlashcardReview() {
           <CardContent className="flex min-h-[400px] items-center justify-center p-8">
             {!isFlipped ? (
               <div className="text-center">
-                <h2 className="text-4xl font-bold text-foreground mb-4 text-balance">{currentPhrase.english}</h2>
-                <p className="text-sm text-muted-foreground">Click to reveal translation</p>
+                <h2 className="text-4xl font-bold text-foreground mb-4 text-balance">{currentPhrase.japanese}</h2>
+                <p className="text-sm text-muted-foreground">Click to reveal English translation</p>
               </div>
             ) : (
               <div className="text-center" style={{ transform: "rotateY(180deg)" }}>
-                <h3 className="text-3xl font-bold text-foreground mb-4">{currentPhrase.japanese}</h3>
+                <h3 className="text-3xl font-bold text-foreground mb-4">{currentPhrase.english}</h3>
                 {currentPhrase.context && <p className="text-muted-foreground italic">{currentPhrase.context}</p>}
               </div>
             )}

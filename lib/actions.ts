@@ -2,11 +2,17 @@
 
 import type { Phrase, Correction } from "./types"
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://mxw2ttoognhtpjwvfvq4itjw7a0qdfqc.lambda-url.ap-northeast-1.on.aws/"
-const API_SECRET = process.env.API_SECRET || "change-me-in-production"
+const API_URL = process.env.NEXT_PUBLIC_API_URL
+const API_SECRET = process.env.API_SECRET
 
 async function apiRequest<T>(action: string, params: Record<string, any> = {}): Promise<T> {
+  if (!API_URL) {
+    throw new Error("NEXT_PUBLIC_API_URL environment variable is not set")
+  }
+  if (!API_SECRET) {
+    throw new Error("API_SECRET environment variable is not set")
+  }
+
   const requestBody = {
     action,
     ...params,
